@@ -1,6 +1,8 @@
-import sys
+import sys, logging
 sys.path.insert(0, '../')
 from planet_wars import issue_order
+from random import choice
+from math import sqrt, ceil
 
 
 def attack_weakest_enemy_planet(state):
@@ -39,3 +41,51 @@ def spread_to_weakest_neutral_planet(state):
     else:
         # (4) Send half the ships from my strongest planet to the weakest enemy planet.
         return issue_order(state, strongest_planet.ID, weakest_planet.ID, strongest_planet.num_ships / 2)
+
+#Sort by lowest distance to target planet
+def distance(source, destination):
+  dx = source.x - destination.x
+  dy = source.y - destination.y
+  return int(ceil(sqrt(dx * dx + dy * dy)))
+  
+#Not accounting for distance yet
+def spread_to_best_neutral_planet(state):
+#  my_planets = iter(sorted(state.my_planets(), key=lambda p: p.num_ships * (1 + 1/p.growth_rate)))
+
+  neutral_planets = [planet for planet in state.neutral_planets()
+                     if not any(fleet.destination_planet == planet.ID for fleet in state.my_fleets())]
+  neutral_planets.sort(key=lambda p: p.num_ships * (1 + 1/p.growth_rate))
+  target_planets = iter(neutral_planets)
+
+  try:
+      while True:
+        target_planet = next(target_planets)
+        i = 0
+        my_empire = state.my_planets()
+        my_empire.sort(key=lambda p: p.num_ships * (1 + 1/p.growth_rate))
+        my_top_5 = []
+        top_5_ships_available = 0
+        while i < 5 and i < len(my_empire):
+            my_top_5.append(my_empire[i])
+            top_5_ships_available += my_empire[i].num_ships*(1/3) #1/3 of the number of ships from our closest best 5 planets
+            i+=1
+#            logging.info(i)
+        my_top_5.sort(key=lambda p: distance(p, target_planet))
+        my_planets = iter(my_top_5)
+        my_planet = next(my_planets)
+        required_ships = target_planet.num_ships + 5
+        j=0
+        forces_sent = 0
+ 
+        while j < 5 and j < len(state.my_planets()):
+          if top_5_ships_available > required_ships:
+            while forces_sent != required_ships and my_planet.num_ships *(2/3) >= 25:
+              regiment = my_planet.num_ships * (1/3)
+              forces_sent += regiment
+              issue_order(state, my_planet.ID, target_planet.ID, regiment)
+              my_planet = next(my_planets)
+          j+=1
+
+
+  except StopIteration:
+      return False
