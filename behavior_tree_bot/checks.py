@@ -12,3 +12,16 @@ def have_largest_fleet(state):
 
 def if_no_neutral_planet_available(state):
     return len(state.not_my_planets()) == len(state.enemy_planets())
+
+def doesNeutralExist(state):
+    return any(state.neutral_planets())
+
+def isCloseNeutralAvail(state):
+    for neutral_planet in state.neutral_planets():
+        for my_planet in state.my_planets():
+            if state.distance(my_planet.ID, neutral_planet.ID) < 500:
+                return True
+    return False
+
+def isUnderAttack(state):
+    return any(fleet.destination_planet in [planet.ID for planet in state.my_planets()] for fleet in state.enemy_fleets())
