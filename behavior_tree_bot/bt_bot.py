@@ -35,11 +35,15 @@ def setup_behavior_tree():
 
     #If we cant find any then try to attack
     attackEnemy = Sequence(name='Attack Strategy')
-
     attackEnemyAction = Action(attackCloseEnemy)
     attackEnemy.child_nodes = [attackEnemyAction]
 
-    root.child_nodes = [closeSpread, attackEnemy]
+    destroy_enemy = Sequence(name='Finisher Strategy')
+    last_enemy_check = Check(is_final_enemy_base)
+    kill_action = Action(finish_enemy)
+    destroy_enemy.child_nodes = [last_enemy_check, kill_action]
+
+    root.child_nodes = [closeSpread, attackEnemy, destroy_enemy]
 
     logging.info('\n' + root.tree_to_string())
     return root

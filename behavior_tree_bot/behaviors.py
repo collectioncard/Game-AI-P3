@@ -54,55 +54,54 @@ def spreadToBestNeutralPlanet(state):
 
     return False
 
-
-#### Stuff from Derek that I didnt use in the current. IDK if we still wanna use it
-
-# Sort by lowest distance to target planet
-def distance(source, destination):
-    dx = source.x - destination.x
-    dy = source.y - destination.y
-    return int(ceil(sqrt(dx * dx + dy * dy)))
-
-
-# Not accounting for distance yet
-def spread_to_best_neutral_planet(state):
-    #  my_planets = iter(sorted(state.my_planets(), key=lambda p: p.num_ships * (1 + 1/p.growth_rate)))
-
-    neutral_planets = [planet for planet in state.neutral_planets()
-                       if not any(fleet.destination_planet == planet.ID for fleet in state.my_fleets())]
-    neutral_planets.sort(key=lambda p: p.num_ships * (1 + 1 / p.growth_rate))
-    target_planets = iter(neutral_planets)
-
+def finish_enemy(state):
+    """
+    Finish enemy when they are left with a single planet
+    """
     try:
-        while True:
-            target_planet = next(target_planets)
-            i = 0
-            my_empire = state.my_planets()
-            my_empire.sort(key=lambda p: p.num_ships * (1 + 1 / p.growth_rate))
-            my_top_5 = []
-            top_5_ships_available = 0
-            while i < 5 and i < len(my_empire):
-                my_top_5.append(my_empire[i])
-                top_5_ships_available += my_empire[i].num_ships * (
-                            1 / 3)  # 1/3 of the number of ships from our closest best 5 planets
-                i += 1
-            #            logging.info(i)
-            my_top_5.sort(key=lambda p: distance(p, target_planet))
-            my_planets = iter(my_top_5)
-            my_planet = next(my_planets)
-            required_ships = target_planet.num_ships + 5
-            j = 0
-            forces_sent = 0
+        enemy_planet = next(iter(state.enemy_planets()), None)
 
-            while j < 5 and j < len(state.my_planets()):
-                if top_5_ships_available > required_ships:
-                    while forces_sent != required_ships and my_planet.num_ships * (2 / 3) >= 25:
-                        regiment = my_planet.num_ships * (1 / 3)
-                        forces_sent += regiment
-                        issue_order(state, my_planet.ID, target_planet.ID, regiment)
-                        my_planet = next(my_planets)
-                j += 1
+        # (1) If enemy has a planet, then attack with the top 5 strongest planets
+        if enemy_planet:
+            logging.info(f"Attacking enemy planet {enemy_planet.ID} with top 5 strongest planets")
+            strongest_planets = sorted(state.my_planets(), key=lambda p: p.num_ships, reverse=True)[:5]
+            for local in strongest_planets:
+                # Unconditionally attack the enemy planet
+                logging.info(f"Attacking from planet {local.ID} to enemy planet {enemy_planet.ID}")
+                if local.num_ships > 1:  # Ensure there is at least one ship left behind
+                    if issue_order(state, local.ID, enemy_planet.ID, local.num_ships - 1):
+                        return True
 
+            # No suitable planet can attack
+            return False
 
-    except StopIteration:
+        # (2) If enemy has no planet, check for their fleets, reinforce planets being targeted
+        logging.info("No enemy planets found, checking for enemy fleets")
+        enemy_fleets = sorted(state.enemy_fleets(), key=lambda f: f.num_ships, reverse=True)
+        if enemy_fleets:
+            enemy_targets = set(f.destination_planet for f in enemy_fleets)
+
+            for fleet in enemy_fleets:
+                target_planet = state.planets[fleet.destination_planet]
+                # Check if target will survive
+                target_defence = target_planet.num_ships + (target_planet.growth_rate * fleet.turns_remaining)
+                if target_defence >= fleet.num_ships:
+                    continue
+
+                # Target will fall, so send support
+                local_friendlies = sorted(state.my_planets(), key=lambda t: state.distance(target_planet.ID, t.ID))
+                # remove target from list
+                local_friendlies = local_friendlies[1:]
+
+                for local in local_friendlies:
+                    if local.ID not in enemy_targets:
+                        logging.info(f"Sending support from planet {local.ID} to planet {target_planet.ID}")
+                        if issue_order(state, local.ID, target_planet.ID, local.num_ships - 1):
+                            return True
+
+        # No planets will be lost
         return False
+    except Exception as e:
+        logging.error(f"Error in finish_enemy: {e}")
+        return False
+    
