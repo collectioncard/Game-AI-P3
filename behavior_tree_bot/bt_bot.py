@@ -38,12 +38,17 @@ def setup_behavior_tree():
     attackEnemyAction = Action(attackCloseEnemy)
     attackEnemy.child_nodes = [attackEnemyAction]
 
+    # defensive_plan = Sequence(name='Defensive Strategy')
+    # under_attack_check = Check(is_under_attack)
+    # reinforce_action = Action(reinforce_weakest_planet)
+    # defensive_plan.child_nodes = [under_attack_check, reinforce_action]
+
     destroy_enemy = Sequence(name='Finisher Strategy')
     last_enemy_check = Check(is_final_enemy_base)
     kill_action = Action(finish_enemy)
     destroy_enemy.child_nodes = [last_enemy_check, kill_action]
 
-    root.child_nodes = [closeSpread, attackEnemy, destroy_enemy]
+    root.child_nodes = [closeSpread, attackEnemy, destroy_enemy,]
 
     logging.info('\n' + root.tree_to_string())
     return root

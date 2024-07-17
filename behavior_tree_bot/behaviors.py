@@ -105,3 +105,24 @@ def finish_enemy(state):
         logging.error(f"Error in finish_enemy: {e}")
         return False
     
+def reinforce_weakest_planet(state):
+    """
+    Reinforce the weakest planet by sending half of the ships from the strongest planet.
+    """
+    try:
+        # Find the strongest planet
+        strongest_planet = max(state.my_planets(), key=lambda p: p.num_ships, default=None)
+        
+        # Find the weakest planet
+        weakest_planet = min(state.my_planets(), key=lambda p: p.num_ships, default=None)
+
+        # Check if we have both a strongest and weakest planet
+        if strongest_planet and weakest_planet and strongest_planet.num_ships > 1:
+            num_ships_to_send = strongest_planet.num_ships // 2  # Send half the ships
+            logging.info(f"Reinforcing weakest planet {weakest_planet.ID} from strongest planet {strongest_planet.ID} with {num_ships_to_send} ships")
+            return issue_order(state, strongest_planet.ID, weakest_planet.ID, num_ships_to_send)
+
+        return False
+    except Exception as e:
+        logging.error(f"Error in reinforce_weakest_planet: {e}")
+        return False

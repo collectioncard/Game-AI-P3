@@ -29,3 +29,5 @@ def isUnderAttack(state):
 def is_final_enemy_base(state):
     return (len(state.neutral_planets()) == 0) and (len(state.enemy_planets()) < 2)
 
+def is_under_attack(state):
+    return any(fleet.destination_planet in [planet.ID for planet in state.my_planets()] for fleet in state.enemy_fleets())
